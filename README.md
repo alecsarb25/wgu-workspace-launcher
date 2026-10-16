@@ -1,6 +1,6 @@
 # WGU Workspace Launcher
 
-**Created by Alec Scott** · [GitHub profile](https://github.com/alecsarb25)
+**Created by Alec Agen** · [GitHub profile](https://github.com/alecsarb25)
 
 A lightweight, unofficial desktop launcher built with **Python and GTK 4** for my Fedora Linux workstation. It brings together quick access to the WGU student portal and Microsoft 365 applications in a single, consistent interface.
 
