@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=WGU
+Comment=Unofficial WGU Student Workspace
+Exec=wgu-menu
+Icon=wgu-launcher
+Terminal=false
+Type=Application
+Categories=Education;
+StartupNotify=true
