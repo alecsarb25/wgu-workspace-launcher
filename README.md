@@ -2,6 +2,10 @@
 
 A lightweight, unofficial desktop launcher built with **Python and GTK 4** for my Fedora Linux workstation. It brings together quick access to the WGU student portal and Microsoft 365 applications in a single, consistent interface.
 
+## Screenshot
+
+![WGU Workspace Launcher running on Fedora GNOME](./wgu-launcher-screenshot.png)
+
 ## Why I built it
 
 I wanted a convenient way to open the student and productivity tools I use frequently without navigating through multiple browser bookmarks or menus. This personal project combines desktop integration, application discovery, and a simple graphical interface.
