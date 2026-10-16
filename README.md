@@ -26,7 +26,9 @@ Applications in the grid rely on compatible `.desktop` entries already being pre
 
 ## Source and setup
 
-Source code and a sample desktop entry will be added after the local working files are reviewed for personal settings and machine-specific paths. This is a personal portfolio project, not a packaged cross-distribution application.
+The Python source is in [`wgu-menu`](./wgu-menu), with a sample [desktop entry](./com.alec.WGULauncher.desktop) and [SVG application icon](./assets/wgu-launcher.svg). The desktop entry assumes `wgu-menu` is on your `PATH` and the icon is installed under the `wgu-launcher` icon name. GTK 4, PyGObject, and `gtk-launch` are required. This is a portfolio code sample, not a packaged installer.
+
+The public copy uses application-name discovery for Outlook rather than the original machine-specific Chrome web-app identifier. If Outlook is not detected, its button remains disabled. This public version has not yet been run-tested.
 
 ## Engineering takeaways
 
