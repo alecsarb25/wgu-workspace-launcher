@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Unofficial WGU student workspace launcher for GTK 4 desktops."""
+
+import glob
+import os
+import subprocess
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+from gi.repository import Gtk, Gdk
+
+
+APP_SPECS = [
+    {"label": "Student Portal", "search_terms": ["WGU Student Portal"], "icon_override": "owl"},
+    {"label": "Outlook", "search_terms": ["Outlook"], "icon_override": "mail-unread-symbolic"},
+    {"label": "Word", "search_terms": ["Microsoft Word", "Word"], "icon_override": None},
+    {"label": "Excel", "search_terms": ["Microsoft Excel", "Excel"], "icon_override": None},
+    {"label": "PowerPoint", "search_terms": ["Microsoft PowerPoint", "PowerPoint"], "icon_override": None},
+    {"label": "OneNote", "search_terms": ["Microsoft OneNote", "OneNote"], "icon_override": None},
+    {"label": "Teams", "search_terms": ["Microsoft Teams", "Teams"], "icon_override": None},
+    {"label": "OneDrive", "search_terms": ["Microsoft OneDrive", "OneDrive"], "icon_override": None},
+]
+
+OWL_ICON_PATH = os.path.expanduser(
+    "~/.local/share/icons/hicolor/scalable/apps/wgu-owl-mark.svg"
+)
+
+
+def ensure_owl_icon():
+    os.makedirs(os.path.dirname(OWL_ICON_PATH), exist_ok=True)
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <g fill="none" stroke="#f5c842" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46 116 C58 86, 86 70, 112 78 C118 80, 123 83, 128 88 C133 83, 138 80, 144 78 C170 70, 198 86, 210 116" />
+    <circle cx="98" cy="126" r="26" />
+    <circle cx="158" cy="126" r="26" />
+    <circle cx="98" cy="126" r="6" fill="#f5c842" />
+    <circle cx="158" cy="126" r="6" fill="#f5c842" />
+    <path d="M118 154 L128 144 L138 154" />
+    <path d="M70 102 L90 88" />
+    <path d="M186 102 L166 88" />
+  </g>
+</svg>"""
+    with open(OWL_ICON_PATH, "w", encoding="utf-8") as f:
+        f.write(svg)
+
+
+def parse_desktop_file(path):
+    data = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                if key in ("Name", "Icon"):
+                    data[key] = value.strip()
+    except Exception:
+        return {}
+    return data
+
+
+def find_app(search_terms):
+    desktop_files = glob.glob(
+        os.path.expanduser("~/.local/share/applications/*.desktop")
+    )
+    for path in desktop_files:
+        data = parse_desktop_file(path)
+        name = data.get("Name", "")
+        for term in search_terms:
+            if term.lower() in name.lower():
+                launcher = os.path.splitext(os.path.basename(path))[0]
+                return {
+                    "launcher": launcher,
+                    "name": name,
+                    "icon": data.get("Icon", ""),
+                }
+    return None
+
+
+def make_icon(icon_value, size=34):
+    if icon_value == "owl":
+        image = Gtk.Image.new_from_file(OWL_ICON_PATH)
+        image.set_pixel_size(size)
+        return image
+    if icon_value:
+        expanded = os.path.expanduser(icon_value)
+        if os.path.isabs(expanded) and os.path.exists(expanded):
+            image = Gtk.Image.new_from_file(expanded)
+            image.set_pixel_size(size)
+            return image
+        image = Gtk.Image.new_from_icon_name(icon_value)
+        image.set_pixel_size(size)
+        return image
+    fallback = Gtk.Image.new_from_icon_name("application-x-executable")
+    fallback.set_pixel_size(size)
+    return fallback
+
+
+CSS = """
+window { background: #0b1f3a; }
+.main-box { padding: 24px 30px; }
+.wgu-title { color: #f5c842; font-size: 38px; font-weight: 800; }
+.subtitle { color: #e7edf5; font-size: 14px; }
+.divider-line { color: #f5c842; font-size: 18px; font-weight: 700; }
+.section-label { color: #9db0c6; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.wgu-button {
+    background: #17385f;
+    color: white;
+    border: 1px solid #31577e;
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 185px;
+    min-height: 66px;
+}
+.wgu-button:hover { background: #214b78; border-color: #f5c842; }
+.wgu-button-label { color: white; font-size: 15px; font-weight: 600; }
+.footer { color: #70879f; font-size: 10px; margin-top: 10px; }
+"""
+
+
+class WGULauncher(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="com.alec.WGULauncher")
+
+    def build_button(self, label_text, launcher, icon_value):
+        button = Gtk.Button()
+        button.add_css_class("wgu-button")
+        content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        content.set_halign(Gtk.Align.START)
+        content.set_valign(Gtk.Align.CENTER)
+        icon = make_icon(icon_value, 34)
+        label = Gtk.Label(label=label_text)
+        label.add_css_class("wgu-button-label")
+        label.set_xalign(0)
+        label.set_hexpand(True)
+        content.append(icon)
+        content.append(label)
+        button.set_child(content)
+        if launcher:
+            button.connect("clicked", self.launch, launcher)
+        else:
+            button.set_sensitive(False)
+            button.set_tooltip_text(f"{label_text} launcher not found")
+        return button
+
+    def do_activate(self):
+        ensure_owl_icon()
+        css = Gtk.CssProvider()
+        css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        window = Gtk.ApplicationWindow(application=self)
+        window.set_title("WGU")
+        window.set_default_size(520, 560)
+        window.set_resizable(False)
+        main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        main.add_css_class("main-box")
+        title = Gtk.Label(label="WGU")
+        title.add_css_class("wgu-title")
+        subtitle = Gtk.Label(label="Western Governors University")
+        subtitle.add_css_class("subtitle")
+        divider = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        divider.set_halign(Gtk.Align.CENTER)
+        left_line = Gtk.Label(label="────────────")
+        left_line.add_css_class("divider-line")
+        owl_icon = make_icon("owl", 22)
+        right_line = Gtk.Label(label="────────────")
+        right_line.add_css_class("divider-line")
+        divider.append(left_line)
+        divider.append(owl_icon)
+        divider.append(right_line)
+        section = Gtk.Label(label="SCHOOL APPS")
+        section.add_css_class("section-label")
+        section.set_halign(Gtk.Align.START)
+        grid = Gtk.Grid()
+        grid.set_column_spacing(12)
+        grid.set_row_spacing(12)
+        grid.set_halign(Gtk.Align.CENTER)
+        for i, spec in enumerate(APP_SPECS):
+            app = find_app(spec["search_terms"])
+            launcher = spec.get("launcher_override") or (app["launcher"] if app else None)
+            icon_value = spec["icon_override"] or (app["icon"] if app else "")
+            button = self.build_button(spec["label"], launcher, icon_value)
+            grid.attach(button, i % 2, i // 2, 1, 1)
+        footer = Gtk.Label(label="WGU Student Workspace")
+        footer.add_css_class("footer")
+        main.append(title)
+        main.append(subtitle)
+        main.append(divider)
+        main.append(section)
+        main.append(grid)
+        main.append(footer)
+        window.set_child(main)
+        window.present()
+
+    def launch(self, button, launcher):
+        subprocess.Popen(["gtk-launch", launcher])
+        self.quit()
+
+
+if __name__ == "__main__":
+    app = WGULauncher()
+    app.run()
